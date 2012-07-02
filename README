@@ -1,0 +1,149 @@
+NAME
+    Modo - An attempt at a Modern Perl 5 implementation
+
+DESCRIPTION
+    This module is my implementation of a Modern Perl 5. Your opinion may
+    vary, but that's the beauty of Perl, it's whatever you make of it. Modo
+    is a set of different classes to bring a modern feel to perl5 using data
+    types. Now, I didn't want to use source filters or black magic to change
+    the actual syntax of perl5, so it uses these classes to emulate Str,
+    Int, etc.. objects. I've taken a type from perl6 (Junctions), because I
+    just liked it. So there. You can also turn Modo into a small class
+    builder of sorts.
+
+SYNOPSIS
+        use Modo;
+
+        # Basic Str example
+        my $str = Str->new("Hello, World!");
+        $str->say; # prints Hello, World!
+
+        # What you can do with it after
+        $str->concat("How")->concat("Are")->concat->("You?")->say;
+    
+        say $str->first; # get the first character
+        say $str->substr(0, 1); # sure, or use substr
+
+    You can find more example below of what Modo can do.
+
+DATA TYPES
+  Introduction
+    You don't need to use Modo data types - this is still perl5 after all.
+    Do what you like. But if you want to use data types, they offer extra
+    convenience methods to perform actions that might look a little ugly in
+    standard Perl. To obtain the raw value of any data type, just use "val",
+    At the time of writing, Modo is pretty bare. It doesn't validate the
+    actual type just yet.
+
+  Int
+        my $int = Int->new(5);
+        say $int->val; # prints 5
+        
+        # chain methods to perform math
+        say $int->add(5)->divide(2)->subtract(3)->mult(7);
+
+  Str
+    This was already demonstrated in the synopsis. Currently you can
+    concatenate Str types, get the first character with ->first and perform
+    substr.
+
+  Junction
+    This is a different beast alltogether. This implementation is fairly
+    minimal, but here's an example anyway.
+
+        my $day = 'Tuesday';
+        my $weekdays = Junction->new(qw< Monday Tuesday Wednesday Thursday Friday >);
+    
+        if ($weekdays->any($day)) {
+            say "OK, I'll see you on $day!";
+        }
+
+    As you can see it just searches an array for the string passed to it. It
+    does accept Str types too.
+
+        my $day = Str->new('Wednesday');
+        if ($weekdays->any($day)) { .. } # this will work
+
+CLASSES AND METHODS
+  Turn Modo into a Class Builder
+    Turning Modo into a class builder is simple.
+
+        package MyFoo;
+        use Modo as => 'Class';
+    
+        1;
+
+    Above is a fully working class.. that doesn't do much, really. It
+    injects the method 'new' for you, and also imports some class-only
+    methods like "has" and "extends". Those familiar with modules like Moose
+    will know what I'm talking about. "has" creates a read-writable, or
+    read-only accessor, and "extends" will inherit another class.
+
+        {
+            package MyFoo;
+            use Modo as => 'Class';
+    
+            has 'x' => ( is => 'rw', default => 5 );
+        }
+
+        my $foo = MyFoo->new;
+        say $foo->x; # prints 5
+    
+        $foo->x(7); # updates x to 7
+        say $foo->x; # prints 7
+
+  Methods
+    We can create "private" methods, which means that method cannot be
+    called by anything outside of the class it lives in. For example,
+
+        {
+            package MyFoo;
+    
+            use Modo as => 'Class';
+    
+            private 'baz' => sub {
+                say "Hello, World!";
+            };
+        }
+    
+        my $foo = MyFoo->new;
+        $foo->baz; # throws a warning
+
+    However, if we create a method that calls it from within itself..
+
+        sub callbaz {
+            this->baz;
+        }
+
+    then..
+
+        $foo->callbaz; # prints Hello, World!
+
+    This seems to be OK because we called a public method that ran the
+    private method for us. Oh, by the way, you can use "this" to return the
+    package name.
+
+    enum
+
+    Let's take a look at the "enum" method. I wanted something similar to
+    perl6's enum, but done in perl5-style. With this we can create constants
+    out of dynamically generated classes. Say we wanted to create our very
+    own Boolean type.. yeah, we can do that.
+
+        use Modo;
+
+        enum Bool => ( 'True:1', 'False:0' );
+
+        # set up a couple of test methods to test against our new Boolean type
+        sub ok { return 1; }
+        sub not_ok { return 0; }
+
+        if (ok() == Bool->True) { say "We're good!"; }
+        if (not_ok() == Bool->False) { say "This is false"; }
+
+    If you seperate an element with ':', then the value to the right will
+    become the value of the method. If you omit this, then it will be the
+    number of position in the list. For example, if we omited the 1 and 0
+    from our True and False elements, then True would have returned '1' and
+    False would have returned '2'.
+
