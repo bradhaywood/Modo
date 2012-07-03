@@ -7,13 +7,6 @@
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
-
-    sub as_Str {
-        my $this = shift;
-        my $str = { _value => $this };
-        return bless $str, 'Str';
-    }
-            
     sub import {
         my ($class, %args) = @_;
         my $caller = caller;
@@ -23,7 +16,7 @@
 
         localscope: {
             no strict 'refs';
-    
+
             *{"${caller}::enum"} = sub {
                 my ($name, @args) = @_;
                 for (my $i = 0; $i < $#args; $i++) {
@@ -156,6 +149,8 @@
             @{"${class}::ISA"} = @$mothers;
         }
     }
+
+    sub clone { bless { %{ $_[0] } }, ref $_[0] }
 
     sub what {
         my $self = shift;
@@ -292,7 +287,7 @@
         }
 
         my $self = {
-            _list => \@j,
+            _value => \@j,
         };
         
         return bless $self, 'Junction';
@@ -300,7 +295,7 @@
 
     sub loop {
         my ($self, $code) = @_;
-        for (@{$self->{_list}}) { $code->($_); }
+        for (@{$self->{_value}}) { $code->($_); }
     }
 
     sub any {
@@ -313,16 +308,65 @@
             $what = $what->val;
         }
 
-        return grep { $_ eq $what } @{$self->{_list}};
+        return grep { $_ eq $what } @{$self->{_value}};
     }
     
     sub first {
         my $self = shift;
         
-        return $self->{_list}->[0];
+        return $self->{_value}->[0];
+    }
+
+    sub sort {
+        my $self = shift;
+    
+        my @s = sort { $a cmp $b } @{$self->{_value}};
+        $self->{_value} = \@s;
+        return $self;
     }
 }
 
+{
+    ## Method class
+    package Method;
+   
+    sub new {
+        my ($class, $code) = @_;
+        
+        my $self = {
+            _value => $code,
+        };
+        
+        return bless $self, 'Method';
+    }
+
+    sub inject {
+        my ($self, $name) = @_;
+        my $caller = caller(1);
+        *{"${caller}::${name}"} = $self->{_value};
+    }
+
+    sub push {
+        my ($self, %args) = @_;
+        
+        my $class = $args{to}||undef;
+        my $name  = $args{as}||undef;
+        
+        if ($class && $name) {
+            *{"${class}::${name}"} = $self->{_value};
+            return 1;
+        }
+        else {
+            warn "Attributes 'as' and 'to' needed to push";
+            return 0;
+        }
+    }
+
+    sub run {
+        my $self = shift;
+        return $self->{_value}->(@_);
+    }
+}
 =head1 NAME
 
 Modo - An attempt at a Modern Perl 5 implementation
@@ -383,6 +427,37 @@ As you can see it just searches an array for the string passed to it. It does ac
 
     my $day = Str->new('Wednesday');
     if ($weekdays->any($day)) { .. } # this will work
+
+=head2 Method
+
+Yep, even methods can have their own class. Weird, right? While fairly useless, it can definitely be expanded on. Let's take a look at what you can do.
+
+    my $method = Method->new(sub {
+        my ($class, $name) = @_;
+        $name = $class if !$name;
+        say "Hello, ${name};
+    });
+
+Now, we can use C<inject> to add the new subroutine into the currect package. The only argument it takes is the name of the subroutine.
+
+    $method->inject('foo');
+    foo("World");
+    __PACKAGE__->foo("World"); # prints Hello, World
+
+Or, we can use C<push> to inject it into a different class.
+
+    use FooClass;
+    
+    $method->push(
+        to => 'FooClass',
+        as => 'foo'
+    );
+
+    FooClass->foo("World"); # prints Hello, World
+
+Using C<run> you can execute the subroutine, which it will then return the results. Arguments to C<run> are actually the arguments you want to pass to the subroutine.
+
+    say $method->run("World", "Something else", "Foo");
 
 =head1 CLASSES AND METHODS
 
@@ -457,6 +532,18 @@ Let's take a look at the C<enum> method. I wanted something similar to perl6's e
     if (not_ok() == Bool->False) { say "This is false"; }
 
 If you seperate an element with ':', then the value to the right will become the value of the method. If you omit this, then it will be the number of position in the list. For example, if we omited the 1 and 0 from our True and False elements, then True would have returned '1' and False would have returned '2'.
+
+B<clone>
+
+C<clone> can be performed on most data type classes (ie: Junction, Str and Int). It creates a copy of the instance so you can perform actions without mutating the original object.
+
+    my $str = Str->new("Hello");
+    say $str->clone->concat(", World");
+    say $str;
+
+    # outputs:
+    # Hello, World
+    # Hello
 
 =cut
 
