@@ -3,10 +3,17 @@
 
     use warnings;
     use strict;
-    
+
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
+
+    sub as_Str {
+        my $this = shift;
+        my $str = { _value => $this };
+        return bless $str, 'Str';
+    }
+            
     sub import {
         my ($class, %args) = @_;
         my $caller = caller;
@@ -41,7 +48,12 @@
                     warn "say() requires an argument";
                     return 0;
                 }
-                print "${str}\n";
+                if (ref($str) eq 'Int' or ref($str) eq 'Str') {
+                    $str->say;
+                }
+                else {
+                    print "${str}\n";
+                }
             };
 
             *{"${caller}::private"} = sub {
