@@ -35,6 +35,17 @@
                 return caller;
             };            
 
+            *{"${caller}::prompt"} = sub {
+                my ($text, $v) = @_;
+                if ($v && $v == -1) {
+                    print $text;
+                }
+                else { print "${text}\n"; }
+                my $in = <STDIN>;
+                chomp $in;
+                return $in;
+            };
+
             *{"${caller}::say"} = sub {
                 my $str = shift;
                 if (! $str) {
@@ -156,7 +167,7 @@
         my $self = shift;
         if (ref($self) eq 'Int') { return 'Int' }
         elsif (ref($self) eq 'Str') { return 'Str' }
-        elsif (ref($self) eq 'Junction') { return 'Junction' }
+        elsif (ref($self) eq 'Array') { return 'Array' }
     }
 
     sub val {
@@ -176,6 +187,14 @@
             return $index;
         }
         else { return 0; }
+    }
+
+    sub size {
+        my $self = shift;
+        my $val = $self->{_value};
+        return scalar(@{$val}) if $self->what eq 'Array';
+        return length($val) if $self->what eq 'Str';
+        return $val if $self->what eq 'Int';
     }
 
     sub substr {
@@ -274,8 +293,8 @@
 }
 
 {
-    ## Junctions :-D
-    package Junction;
+    ## Array class
+    package Array;
     
     use base 'Modo';
         
@@ -283,19 +302,31 @@
         my ($class, @j) = @_;
         
         if (! @j) {
-            die "No list passed to junction\n";
+            die "No list passed to Array\n";
         }
 
         my $self = {
             _value => \@j,
         };
         
-        return bless $self, 'Junction';
+        return bless $self, 'Array';
     }
 
     sub loop {
         my ($self, $code) = @_;
         for (@{$self->{_value}}) { $code->($_); }
+    }
+
+    sub push {
+        my ($self, @list) = @_;
+        push @{$self->{_value}}, @list;
+        return $self;
+    }
+
+    sub insert {
+        my ($self, @list) = @_;
+        unshift @{$self->{_value}}, @list;
+        return $self;
     }
 
     sub any {
@@ -315,6 +346,12 @@
         my $self = shift;
         
         return $self->{_value}->[0];
+    }
+
+    sub last {
+        my $self = shift;
+        
+        return $self->{_value}->[@{$self->{_value}}-1];
     }
 
     sub sort {
@@ -373,7 +410,7 @@ Modo - An attempt at a Modern Perl 5 implementation
 
 =head1 DESCRIPTION
 
-This module is my implementation of a Modern Perl 5. Your opinion may vary, but that's the beauty of Perl, it's whatever you make of it. Modo is a set of different classes to bring a modern feel to perl5 using data types. Now, I didn't want to use source filters or black magic to change the actual syntax of perl5, so it uses these classes to emulate Str, Int, etc.. objects. I've taken a type from perl6 (Junctions), because I just liked it. So there.
+This module is my implementation of a Modern Perl 5. Your opinion may vary, but that's the beauty of Perl, it's whatever you make of it. Modo is a set of different classes to bring a modern feel to perl5 using data types. Now, I didn't want to use source filters or black magic to change the actual syntax of perl5, so it uses these classes to emulate Str, Int, etc.. objects.
 You can also turn Modo into a small class builder of sorts.
 
 =head1 SYNOPSIS
@@ -412,12 +449,12 @@ At the time of writing, Modo is pretty bare. It doesn't validate the actual type
 
 This was already demonstrated in the synopsis. Currently you can concatenate Str types, get the first character with ->first and perform substr.
 
-=head2 Junction
+=head2 Array
 
-This is a different beast alltogether. This implementation is fairly minimal, but here's an example anyway.
+Makes array operations a little more OO and prettier.
 
     my $day = 'Tuesday';
-    my $weekdays = Junction->new(qw< Monday Tuesday Wednesday Thursday Friday >);
+    my $weekdays = Array->new(qw< Monday Tuesday Wednesday Thursday Friday >);
     
     if ($weekdays->any($day)) {
         say "OK, I'll see you on $day!";
@@ -427,6 +464,22 @@ As you can see it just searches an array for the string passed to it. It does ac
 
     my $day = Str->new('Wednesday');
     if ($weekdays->any($day)) { .. } # this will work
+
+C<push>
+
+Use C<push> to push an element to the end of the array.
+
+    say $arr->push('hello');
+
+Like with most Modo things it returns an object, so we can do things like
+
+    say $arr->push('foo')->size;
+
+C<insert>
+
+Inserts an element to the beginning of the array.
+
+    say $arr->insert('baz');
 
 =head2 Method
 
@@ -535,7 +588,7 @@ If you seperate an element with ':', then the value to the right will become the
 
 B<clone>
 
-C<clone> can be performed on most data type classes (ie: Junction, Str and Int). It creates a copy of the instance so you can perform actions without mutating the original object.
+C<clone> can be performed on most data type classes (ie: Array, Str and Int). It creates a copy of the instance so you can perform actions without mutating the original object.
 
     my $str = Str->new("Hello");
     say $str->clone->concat(", World");
@@ -544,6 +597,23 @@ C<clone> can be performed on most data type classes (ie: Junction, Str and Int).
     # outputs:
     # Hello, World
     # Hello
+
+C<prompt>
+
+Takes user input and returns it. This will also chomp the newline from the end for you. It takes two arguments, the last one being optional. The first argument is a line of text to present to the user before the STDIN is taken, the second, if you pass a -1 it will not add a newline to the end of the string sent.
+
+    my $name = prompt("Please enter your name: ", -1);
+    say "Hello, ${name}!";
+
+    my $stuff = prompt("Type stuff below");
+    say "You said: ${stuff}";
+
+C<size>
+
+This is another data type method you can use on Strings, Integers and Arrays. For strings, it will return the length of the string. With Arrays it will return the number of elements, and it just returns the integer as itself. Useless, right?
+
+    my $arr = Array->new(qw< a b c d e >);
+    say $arr->size;
 
 =cut
 
