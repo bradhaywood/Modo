@@ -19,7 +19,7 @@
 
             *{"${caller}::enum"} = sub {
                 my ($name, @args) = @_;
-                for (my $i = 0; $i < $#args; $i++) {
+                for (my $i = 0; $i < @args; $i++) {
                     my $n = $i+1;
                     my $opt = $args[$i];
                     my @a = split(':', $opt);
