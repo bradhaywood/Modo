@@ -4,8 +4,40 @@
     use warnings;
     use strict;
 
+    use Attribute::Handlers;    
+    use PadWalker 'peek_my';
     our $VERSION = '0.001';
     $Modo::Classes = [];
+
+    sub UNIVERSAL::Int : ATTR {
+        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
+        {
+            no strict 'refs';
+            no warnings 'redefine';
+            my $name = *{$symbol}{NAME};
+            *{"${package}::${name}"} = sub { return Int->new($referent->()) };
+        }
+    }
+
+    sub UNIVERSAL::Str : ATTR {
+        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
+        {
+            no strict 'refs';
+            no warnings 'redefine';
+            my $name = *{$symbol}{NAME};
+            *{"${package}::${name}"} = sub { return Str->new($referent->()) };
+        }
+    }
+
+    sub UNIVERSAL::Array : ATTR {
+        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
+        {
+            no strict 'refs';
+            no warnings 'redefine';
+            my $name = *{$symbol}{NAME};
+            *{"${package}::${name}"} = sub { return Array->new($referent->()) };
+        }
+    }
 
     sub import {
         my ($class, %args) = @_;
@@ -48,7 +80,7 @@
 
             *{"${caller}::say"} = sub {
                 my $str = shift;
-                if (! $str) {
+                if (! defined $str) {
                     warn "say() requires an argument";
                     return 0;
                 }
@@ -614,6 +646,29 @@ This is another data type method you can use on Strings, Integers and Arrays. Fo
 
     my $arr = Array->new(qw< a b c d e >);
     say $arr->size;
+
+=head1 ATTRIBUTES
+
+You can now access data types using attributes. If, for some reason, you didn't want to create a normal variable, like
+
+    my $x = Int->new(5);
+
+You can now do it as such,
+
+    sub x :Int { 5 }
+
+The above will create a subroutine called 'x' with the value of 5 as an Int type. So you can do this stuff,
+
+    sub i :Int { 5 }
+    say i->add(5); # outputs 10
+
+This works with Str and Array too, of course
+
+    sub str :Str { 'Hello' }
+    say str->concat(', World!'); # prints Hello, World!
+    
+    sub myarr :Array { 1..10 }
+    myarr->loop(sub { say $_ }); # prints 1 to 10 
 
 =cut
 
