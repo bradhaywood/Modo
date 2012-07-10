@@ -5,7 +5,6 @@
     use strict;
 
     use Attribute::Handlers;    
-    use PadWalker 'peek_my';
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
