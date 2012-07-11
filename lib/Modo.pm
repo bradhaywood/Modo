@@ -1,3 +1,5 @@
+## TODO:
+# Make it so Data types don't have standard methods imported (like say, Conditional, etc)
 {
     package Modo;
 
@@ -5,7 +7,6 @@
     use strict;
 
     use Attribute::Handlers;    
-    use PadWalker 'peek_my';
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
@@ -25,7 +26,7 @@
             no strict 'refs';
             no warnings 'redefine';
             my $name = *{$symbol}{NAME};
-            *{"${package}::${name}"} = sub { return Str->new($referent->()) };
+            *{"${package}::${name}"} = sub { return $referent ? Str->new($referent->()) : Str->new('') };
         }
     }
 
@@ -89,6 +90,31 @@
                 }
                 else {
                     print "${str}\n";
+                }
+            };
+
+            *{"${caller}::conditional"} = sub {
+                my ($name, @args) = @_;
+                if ($name) {
+                    my $pname = "Conditional::${name}";
+                    *{$pname} = sub {
+                        my $i;
+                        my @err = ();
+                        for (@args) {
+                            $i++;
+                            if ($_ =~ /^(\d+)/) {
+                                push @err, $i
+                                    if $1 == 0;
+                            }
+                        }
+
+                        if (scalar(@err) > 0) {
+                            return 0;
+                        }
+                        else {
+                            return 1;
+                        }
+                    };
                 }
             };
 
@@ -195,7 +221,7 @@
 
     sub clone { bless { %{ $_[0] } }, ref $_[0] }
 
-    sub what {
+    sub WHAT {
         my $self = shift;
         if (ref($self) eq 'Int') { return 'Int' }
         elsif (ref($self) eq 'Str') { return 'Str' }
@@ -224,9 +250,9 @@
     sub size {
         my $self = shift;
         my $val = $self->{_value};
-        return scalar(@{$val}) if $self->what eq 'Array';
-        return length($val) if $self->what eq 'Str';
-        return $val if $self->what eq 'Int';
+        return scalar(@{$val}) if $self->WHAT eq 'Array';
+        return length($val) if $self->WHAT eq 'Str';
+        return $val if $self->WHAT eq 'Int';
     }
 
     sub substr {
@@ -436,6 +462,7 @@
         return $self->{_value}->(@_);
     }
 }
+
 =head1 NAME
 
 Modo - An attempt at a Modern Perl 5 implementation
@@ -647,6 +674,16 @@ This is another data type method you can use on Strings, Integers and Arrays. Fo
     my $arr = Array->new(qw< a b c d e >);
     say $arr->size;
 
+C<WHAT>
+
+Call this on any data type method to get its type. For example,
+
+    my $this = Str->new("Hey");
+    my $that = Array->new(1..6);
+    
+    say $this->WHAT; # Str
+    say $that->WHAT; # Array
+
 =head1 ATTRIBUTES
 
 You can now access data types using attributes. If, for some reason, you didn't want to create a normal variable, like
@@ -669,6 +706,27 @@ This works with Str and Array too, of course
     
     sub myarr :Array { 1..10 }
     myarr->loop(sub { say $_ }); # prints 1 to 10 
+
+=head1 CONDITIONALS
+
+A new type of class in Modo is C<Conditionals>. Basically, instead of writing an C<if> statement with a large number of tests, you can convert them all into one conditional and test that. As it creates a class per-conditional you can share them anywhere and resume them.
+
+    # The conditional below would fail
+    # because one of the tests equals 0
+    conditional 'MyCond' => (
+        this_method(),
+        that_method(),
+        10-10,
+    );
+
+    if (Conditional->MyCond) {
+        say "We're good :-)";
+    }
+    else {
+        say "There was a problem";
+    }
+
+When you call C<Conditional>, it will run through every test, and if any are false (equal to 0), then it returns 0 itself. If they all pass, it will return 1 for true.
 
 =cut
 
