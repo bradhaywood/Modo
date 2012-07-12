@@ -50,6 +50,21 @@
         localscope: {
             no strict 'refs';
 
+            *{"${caller}::lambda"} = sub(&$) {
+                my ($block, $ref) = @_;
+
+                if (ref($ref) eq 'ARRAY') {
+                    for (@{$ref}) {
+                        $block->($_);
+                    }
+                }
+                elsif (ref($ref) eq 'HASH') {
+                    while(my ($key, $val) = each(%{$ref})) {
+                        $block->($key, $val);
+                    }
+                }
+            };
+
             *{"${caller}::enum"} = sub {
                 my ($name, @args) = @_;
                 for (my $i = 0; $i < @args; $i++) {
@@ -644,6 +659,28 @@ Let's take a look at the C<enum> method. I wanted something similar to perl6's e
     if (not_ok() == Bool->False) { say "This is false"; }
 
 If you seperate an element with ':', then the value to the right will become the value of the method. If you omit this, then it will be the number of position in the list. For example, if we omited the 1 and 0 from our True and False elements, then True would have returned '1' and False would have returned '2'.
+
+B<lambda>
+
+Not really a proper lambda, I guess. But I wasn't sure what else to name it. This works on arrayrefs or hashrefs, simply pass it a block, then the ref and it will iterate through it while passing the value, or key and value if applicable as arguments.
+
+    # print 1 to 5
+    lambda {
+        say $_[0];
+    } [ 1..5 ];
+
+    # or you can do hashrefs
+    my $h = {
+        name  => 'Foo',
+        age   => 5,
+        place => 'Perl Land'
+    };
+
+    lambda {
+        my ($key, $val) = @_;
+        say "Key: $key";
+        say "Value: $val";
+    } $h;
 
 B<clone>
 
