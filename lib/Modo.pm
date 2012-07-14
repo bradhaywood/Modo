@@ -281,7 +281,19 @@
     package Str;
     
     use base 'Modo';
-    
+   
+    use overload (
+        '+' => sub {
+            my $orig = shift;
+                for (@_) {
+                $orig->concat($_);
+            }
+
+            return $orig;
+        },
+        fallback => 1
+    );
+ 
     sub new {
         my ($class, $str) = @_;
         
@@ -312,6 +324,37 @@
     ## Int class
     package Int;
    
+    use overload (
+        '+' => sub {
+            my $orig = shift;
+            for(@_) {
+                $orig->add($_);
+            }
+            return $orig;
+        },
+        '-' => sub {
+            my $orig = shift;
+            for(@_) {
+                $orig->subtract($_);
+            }
+            return $orig;
+        },
+        '/' => sub {
+            my $orig = shift;
+            for(@_) {
+                $orig->divide($_);
+            }
+            return $orig;
+        },
+        '*' => sub {
+            my $orig = shift;
+            for(@_) {
+                $orig->mult($_);
+            }
+            return $orig;
+        },
+    );
+
     use base 'Modo';
  
     sub new {
@@ -370,6 +413,24 @@
     package Array;
     
     use base 'Modo';
+    
+    use overload (
+        '+' => sub {
+            my $orig = shift;
+            for my $arr (@_) {
+                $orig->push(@{$arr});
+            }
+            return $orig;
+        },
+        '<<' => sub {
+            my $orig = shift;
+            for my $arr (@_) {
+                $orig->insert(@{$arr});
+            }
+            return $orig;
+        },
+        fallback => 1,
+    );
         
     sub new {
         my ($class, @j) = @_;
@@ -764,6 +825,30 @@ A new type of class in Modo is C<Conditionals>. Basically, instead of writing an
     }
 
 When you call C<Conditional>, it will run through every test, and if any are false (equal to 0), then it returns 0 itself. If they all pass, it will return 1 for true.
+
+=head1 OVERLOADED OPERATORS
+
+These beautiful things allow us to perform some chained methods by using standard operators. For example, to C<push> a new list to an existing Array data class, we can use C<+>.
+
+    my $arr = Array->new(1..2); # setup the default Array
+    my @b = qw(Hello there);
+    my @c = qw(World);    
+
+    ($arr + \@b + \@c)->loop(sub {
+        say $_;
+    });
+
+The above example adds the two arrays @b and @c to the default Array object, then iterators through it. Yes, we totally just did that.
+We can also tell the Array we want to C<insert> elements to the front of the array like so
+
+    $arr << \@b << \@a
+
+It also works for Ints and Strs
+
+    my $str = Str->new("Hello");
+    say $str + " World";
+
+That will call C<concat> on the string and mangle it for you, without actually calling concat.
 
 =cut
 
