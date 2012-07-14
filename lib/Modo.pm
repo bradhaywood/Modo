@@ -429,6 +429,10 @@
             }
             return $orig;
         },
+        '~~' => sub {
+            my ($ob, $match) = @_;
+            return $ob->any($match);
+        },
         fallback => 1,
     );
         
