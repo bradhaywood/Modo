@@ -245,6 +245,8 @@
 
     sub val {
         my $self = shift;
+        return @{$self->{_value}}
+            if ref($self) eq 'Array';
         return $self->{_value};
     }
 
@@ -296,6 +298,9 @@
             my @s = split($delim, $str->val);
             my $a = Array->new(@s);
             return $a;
+        },
+        '^' => sub {
+            return uc shift->val;
         },
         fallback => 1
     );
