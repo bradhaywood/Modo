@@ -305,9 +305,15 @@
         fallback => 1
     );
  
-    sub new {
+    sub new($;$@) {
         my ($class, $str) = @_;
-        
+        if (ref($str) eq 'ARRAY') {
+            my @a;
+            for (@$str) {
+                push @a, Str->new($_);
+            }
+            return @a;
+        }
         my $self = {
             _value => $str||'',
         };
