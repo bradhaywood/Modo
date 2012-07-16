@@ -291,6 +291,12 @@
 
             return $orig;
         },
+        '/' => sub {
+            my ($str, $delim) = @_;
+            my @s = split($delim, $str->val);
+            my $a = Array->new(@s);
+            return $a;
+        },
         fallback => 1
     );
  
@@ -432,6 +438,10 @@
         '~~' => sub {
             my ($ob, $match) = @_;
             return $ob->any($match);
+        },
+        '>>' => sub {
+            my $ob = shift;
+            print $ob . "\n";
         },
         fallback => 1,
     );
@@ -847,12 +857,21 @@ We can also tell the Array we want to C<insert> elements to the front of the arr
 
     $arr << \@b << \@a
 
-It also works for Ints and Strs
+It also works for Ints and Strs. Why have I chosen to overload strings? Because strings shouldn't be allowed to perform math.
 
     my $str = Str->new("Hello");
     say $str + " World";
 
 That will call C<concat> on the string and mangle it for you, without actually calling concat.
+
+We can split strings quite easily with '/'
+
+    my $str = Str->new('Hello:there:world');
+    ($str / ':')->loop(sub {
+        say $_;
+    });
+    
+As you can see, it returns an Array class for you instead of a standard array.
 
 =cut
 
