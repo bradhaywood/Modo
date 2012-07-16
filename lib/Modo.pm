@@ -6,39 +6,8 @@
     use warnings;
     use strict;
 
-    use Attribute::Handlers;    
     our $VERSION = '0.001';
     $Modo::Classes = [];
-
-    sub UNIVERSAL::Int : ATTR {
-        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
-        {
-            no strict 'refs';
-            no warnings 'redefine';
-            my $name = *{$symbol}{NAME};
-            *{"${package}::${name}"} = sub { return Int->new($referent->()) };
-        }
-    }
-
-    sub UNIVERSAL::Str : ATTR {
-        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
-        {
-            no strict 'refs';
-            no warnings 'redefine';
-            my $name = *{$symbol}{NAME};
-            *{"${package}::${name}"} = sub { return $referent ? Str->new($referent->()) : Str->new('') };
-        }
-    }
-
-    sub UNIVERSAL::Array : ATTR {
-        my ($package, $symbol, $referent, $attr, $data, $phase) = @_;
-        {
-            no strict 'refs';
-            no warnings 'redefine';
-            my $name = *{$symbol}{NAME};
-            *{"${package}::${name}"} = sub { return Array->new($referent->()) };
-        }
-    }
 
     sub import {
         my ($class, %args) = @_;
@@ -305,20 +274,16 @@
         fallback => 1
     );
  
-    sub new($;$@) {
-        my ($class, $str) = @_;
-        if (ref($str) eq 'ARRAY') {
-            my @a;
-            for (@$str) {
-                push @a, Str->new($_);
-            }
-            return @a;
+    sub new {
+        my ($class, @str) = @_;
+        return bless { _value => $str[0]||'' }, 'Str'
+            if scalar(@str) == 1;
+    
+        my @a = ();
+        for (@str) {
+            push @a, Str->new($_);
         }
-        my $self = {
-            _value => $str||'',
-        };
-        
-        return bless $self, 'Str';
+        return @a;
     }
 
     sub concat {
