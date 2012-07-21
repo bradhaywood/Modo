@@ -9,6 +9,7 @@
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
+    no warnings 'redefine';
     sub import {
         my ($class, %args) = @_;
         my $caller = caller;
@@ -127,6 +128,17 @@
                             }
                         }
                         return bless $a, $caller;
+                    };
+
+                    *{ "$caller\::${caller}" } = sub(&;$) {
+                        my $code = shift;
+                        my $new = \&{"${caller}::new"};
+                        *new = sub {
+                            $code->(@_);
+                            $new->(@_);
+                        };
+
+                        *{"${caller}::new"} = \*new;
                     };
 
                     *{ "$caller\::has" } = sub {
@@ -415,10 +427,6 @@
             my ($ob, $match) = @_;
             return $ob->any($match);
         },
-        '>>' => sub {
-            my $ob = shift;
-            print $ob . "\n";
-        },
         fallback => 1,
     );
         
@@ -434,6 +442,11 @@
         };
         
         return bless $self, 'Array';
+    }
+    
+    sub as_ref {
+        my $self = shift;
+        return $self->{_value};
     }
 
     sub loop {
@@ -476,6 +489,26 @@
         my $self = shift;
         
         return $self->{_value}->[@{$self->{_value}}-1];
+    }
+
+    sub end {
+        my $self = shift;
+        return scalar(@{$self->{_value}}) - 1;
+    }
+
+    sub pairs {
+        my $self = shift;
+        my @pairs = ();
+        for (my $i = 0; $i < scalar(@{$self->{_value}}); $i++) {
+            push(@pairs, { $i => $self->{_value}->[$i] } );
+        }
+        
+        return Array->new(@pairs);
+    }
+
+    sub get {
+        my ($self, $index) = @_;
+        return $self->{_value}->[$index];
     }
 
     sub sort {
