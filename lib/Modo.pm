@@ -499,8 +499,14 @@
     sub pairs {
         my $self = shift;
         my @pairs = ();
-        for (my $i = 0; $i < scalar(@{$self->{_value}}); $i++) {
-            push(@pairs, { $i => $self->{_value}->[$i] } );
+        if (scalar(@{$self->{_value}}) % 2 == 0) {
+            while(my $key = shift @{$self->{_value}}) {
+                push @pairs, { $key => shift @{$self->{_value}} }
+            }
+        }
+        else {
+            warn "Can't use pairs() on this Array. The count is not even";
+            return $self;
         }
         
         return Array->new(@pairs);
@@ -638,6 +644,25 @@ C<insert>
 Inserts an element to the beginning of the array.
 
     say $arr->insert('baz');
+
+C<end>
+
+Returns the index of the last element
+
+C<pairs>
+
+Will only accept an even number of elements. It will pair them up, returning an Array with hashrefs of the results.
+
+    my $arr = Array->new(qw<name Foo status Active>);
+    $arr->pairs->loop(sub {
+        foreach my $key (%$_) {
+            say "$key: $_->{$key}";
+        }
+    });
+
+    # returns
+    # name: Foo
+    # status: Active
 
 =head2 Method
 
