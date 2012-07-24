@@ -5,7 +5,9 @@
 
     use warnings;
     use strict;
-
+   
+    use parent 'autobox';
+ 
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
@@ -14,9 +16,12 @@
         my ($class, %args) = @_;
         my $caller = caller;
 
+        $class->SUPER::import(
+            SCALAR => 'Str',
+            ARRAY  => 'Array',
+        );
         warnings->import();
         strict->import();
-
         localscope: {
             no strict 'refs';
 
@@ -285,8 +290,13 @@
         },
         fallback => 1
     );
- 
-    sub new {
+
+    
+    sub ob {
+        return bless { _value => shift||'' }, 'Str';
+    }
+   
+     sub new {
         my ($class, @str) = @_;
         return bless { _value => $str[0]||'' }, 'Str'
             if scalar(@str) == 1;
@@ -429,6 +439,10 @@
         },
         fallback => 1,
     );
+    
+    sub ob {
+        return bless { _value => shift }, 'Array';
+    }
         
     sub new {
         my ($class, @j) = @_;
