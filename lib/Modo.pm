@@ -5,17 +5,23 @@
 
     use warnings;
     use strict;
-
+   
+    use parent 'autobox';
+ 
     our $VERSION = '0.001';
     $Modo::Classes = [];
 
+    no warnings 'redefine';
     sub import {
         my ($class, %args) = @_;
         my $caller = caller;
 
+        $class->SUPER::import(
+            SCALAR => 'Str',
+            ARRAY  => 'Array',
+        );
         warnings->import();
         strict->import();
-
         localscope: {
             no strict 'refs';
 
@@ -127,6 +133,17 @@
                             }
                         }
                         return bless $a, $caller;
+                    };
+
+                    *{ "$caller\::${caller}" } = sub(&;$) {
+                        my $code = shift;
+                        my $new = \&{"${caller}::new"};
+                        *new = sub {
+                            $code->(@_);
+                            $new->(@_);
+                        };
+
+                        *{"${caller}::new"} = \*new;
                     };
 
                     *{ "$caller\::has" } = sub {
@@ -273,8 +290,13 @@
         },
         fallback => 1
     );
- 
-    sub new {
+
+    
+    sub ob {
+        return bless { _value => shift||'' }, 'Str';
+    }
+   
+     sub new {
         my ($class, @str) = @_;
         return bless { _value => $str[0]||'' }, 'Str'
             if scalar(@str) == 1;
@@ -417,6 +439,10 @@
         },
         fallback => 1,
     );
+    
+    sub ob {
+        return bless { _value => shift }, 'Array';
+    }
         
     sub new {
         my ($class, @j) = @_;
@@ -430,6 +456,11 @@
         };
         
         return bless $self, 'Array';
+    }
+    
+    sub as_ref {
+        my $self = shift;
+        return $self->{_value};
     }
 
     sub loop {
@@ -472,6 +503,32 @@
         my $self = shift;
         
         return $self->{_value}->[@{$self->{_value}}-1];
+    }
+
+    sub end {
+        my $self = shift;
+        return scalar(@{$self->{_value}}) - 1;
+    }
+
+    sub pairs {
+        my $self = shift;
+        my @pairs = ();
+        if (scalar(@{$self->{_value}}) % 2 == 0) {
+            while(my $key = shift @{$self->{_value}}) {
+                push @pairs, { $key => shift @{$self->{_value}} }
+            }
+        }
+        else {
+            warn "Can't use pairs() on this Array. The count is not even";
+            return $self;
+        }
+        
+        return Array->new(@pairs);
+    }
+
+    sub get {
+        my ($self, $index) = @_;
+        return $self->{_value}->[$index];
     }
 
     sub sort {
@@ -601,6 +658,25 @@ C<insert>
 Inserts an element to the beginning of the array.
 
     say $arr->insert('baz');
+
+C<end>
+
+Returns the index of the last element
+
+C<pairs>
+
+Will only accept an even number of elements. It will pair them up, returning an Array with hashrefs of the results.
+
+    my $arr = Array->new(qw<name Foo status Active>);
+    $arr->pairs->loop(sub {
+        foreach my $key (%$_) {
+            say "$key: $_->{$key}";
+        }
+    });
+
+    # returns
+    # name: Foo
+    # status: Active
 
 =head2 Method
 
