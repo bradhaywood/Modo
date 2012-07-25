@@ -415,10 +415,6 @@
             my ($ob, $match) = @_;
             return $ob->any($match);
         },
-        '>>' => sub {
-            my $ob = shift;
-            print $ob . "\n";
-        },
         fallback => 1,
     );
         
